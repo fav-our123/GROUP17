@@ -11,11 +11,9 @@ import { fileURLToPath } from "url";
 dotenv.config();
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "*" }));    
 
-const cors = require('cors');
-app.use(cors({ origin: '*', credentials: true }));
-
+// ✅ Only one CORS setup
+app.use(cors({ origin: "*", credentials: true }));
 
 // --- Path setup ---
 const __filename = fileURLToPath(import.meta.url);
@@ -51,8 +49,6 @@ const upload = multer({ storage });
 
 // 🧱 Test
 app.get("/", (req, res) => res.send("✅ FUTO Dept Server Running!"));
-
-// 🧩 Admin login/register routes here...
 
 // 📰 Announcements
 app.post("/admin/announcement", (req, res) => {
