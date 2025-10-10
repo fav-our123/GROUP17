@@ -12,5 +12,5 @@ services:
           property: connectionString
 
 databases:
-  - name: myapp-db
+  - name: csc_dept
     plan: free
