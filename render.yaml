@@ -6,9 +6,9 @@ services:
     buildCommand: "npm install"
     startCommand: "npm start"
     envVars:
-      - key: "postgresql://csc_dept_user:cXR49dWsnFEzszsRaDOrthcVmNuLxKud@dpg-d3jr85ur433s739i5a2g-a.oregon-postgres.render.com/csc_dept"
+      - key: DATABASE_URL
         fromDatabase:
-          name: csc-dept
+          name: csc_dept
           property: connectionString
 
 databases:
