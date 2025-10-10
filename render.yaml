@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: GROUP17
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: postgresql://csc_dept_user:cXR49dWsnFEzszsRaDOrthcVmNuLxKud@dpg-d3jr85ur433s739i5a2g-a.oregon-postgres.render.com/csc_dept
+        fromDatabase:
+          name: csc-dept
+          property: connectionString
+
+databases:
+  - name: csc_dept
+    plan: free
