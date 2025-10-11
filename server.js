@@ -6,12 +6,11 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import pkg from "pg";
-import bcrypt from "bcrypt"; // for secure passwords
 
 dotenv.config();
 const { Pool } = pkg;
-const app = express();
 
+const app = express();
 app.use(express.json());
 app.use(
   cors({
@@ -44,29 +43,21 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // === Test route ===
-app.get("/", (req, res) => res.send("✅ FUTO Dept Server Running!"));
+app.get("/", (req, res) => res.send("✅ CSC Department Server Running!"));
 
-// === ADMIN AUTHENTICATION ===
-// (You can later replace this with a proper "admins" table)
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@futo.edu.ng";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD_HASH || bcrypt.hashSync("admin123", 10); // default
+// === ADMIN LOGIN ===
+app.post("/admin/login", (req, res) => {
+  const { username, password } = req.body;
+  console.log("Login request received:", username, password);
 
-app.post("/admin/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ message: "Email and password required" });
+  // Static credentials for now
+  const ADMIN_USERNAME = "admin1";
+  const ADMIN_PASSWORD = "12345";
 
-  try {
-    const match =
-      email === ADMIN_EMAIL && (await bcrypt.compare(password, ADMIN_PASSWORD));
-
-    if (!match)
-      return res.status(401).json({ message: "Invalid credentials" });
-
-    res.json({ message: "✅ Login successful", email });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ message: "Server error" });
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    res.json({ message: "✅ Login successful", username });
+  } else {
+    res.status(401).json({ message: "❌ Invalid credentials" });
   }
 });
 
@@ -129,11 +120,11 @@ app.get("/user/results", async (req, res) => {
   }
 });
 
-// === Catch-all for frontend routing ===
+// === Catch-all ===
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-// === Start Server ===
+// === Start server ===
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server started on port ${PORT}`));
