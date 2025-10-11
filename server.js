@@ -1,130 +1,113 @@
 import express from "express";
-import dotenv from "dotenv";
+import pg from "pg";
 import cors from "cors";
+import dotenv from "dotenv";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
-import pkg from "pg";
 
 dotenv.config();
-const { Pool } = pkg;
-
 const app = express();
+app.use(cors());
 app.use(express.json());
-app.use(
-  cors({
-    origin: ["https://group171.onrender.com", "*"],
-    credentials: true,
-  })
-);
 
-// === Path setup ===
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const frontendPath = path.join(__dirname, "../FRONTEND");
-const uploadPath = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
-
-app.use(express.static(frontendPath));
-app.use("/uploads", express.static(uploadPath));
-
-// === Database setup ===
-const pool = new Pool({
+// === PostgreSQL connection ===
+const db = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false }
 });
 
-// === Multer setup ===
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadPath),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
+// === Multer (for file uploads if needed) ===
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// === Helper ===
+const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
+
 // === Test route ===
-app.get("/", (req, res) => res.send("✅ CSC Department Server Running!"));
+app.get("/", (req, res) => {
+  res.send("✅ FUTO Dept Server Running!");
+});
 
 // === ADMIN LOGIN ===
-app.post("/admin/login", (req, res) => {
-  const { username, password } = req.body;
-  console.log("Login request received:", username, password);
+app.post("/admin/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const result = await db.query("SELECT * FROM admins WHERE username=$1", [username]);
 
-  // Static credentials for now
-  const ADMIN_USERNAME = "admin1";
-  const ADMIN_PASSWORD = "12345";
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: "Invalid username" });
+    }
 
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    res.json({ message: "✅ Login successful", username });
-  } else {
-    res.status(401).json({ message: "❌ Invalid credentials" });
+    const admin = result.rows[0];
+    const validPassword = password === admin.password || await bcrypt.compare(password, admin.password);
+
+    if (!validPassword) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
+
+    const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, { expiresIn: "6h" });
+    res.json({ token });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error during login" });
   }
 });
 
 // === ANNOUNCEMENTS ===
-app.post("/admin/announcement", async (req, res) => {
-  const { title, message } = req.body;
-  if (!title || !message)
-    return res.status(400).json({ message: "Missing title or message" });
-
+// Post new announcement (admin)
+app.post("/announcements", async (req, res) => {
   try {
-    await pool.query(
-      "INSERT INTO announcements (title, message, created_at) VALUES ($1, $2, NOW())",
-      [title, message]
-    );
-    res.json({ message: "✅ Announcement posted!" });
+    const { title, body } = req.body;
+    const date = new Date();
+
+    await db.query("INSERT INTO announcements (title, body, date) VALUES ($1, $2, $3)", [title, body, date]);
+    res.json({ message: "Announcement posted successfully" });
   } catch (err) {
-    console.error("DB error:", err);
-    res.status(500).json({ message: "Database error" });
+    console.error("Announcement error:", err);
+    res.status(500).json({ message: "Failed to post announcement" });
   }
 });
 
-app.get("/user/announcements", async (req, res) => {
+// Fetch all announcements
+app.get("/announcements", async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      "SELECT * FROM announcements ORDER BY id DESC"
-    );
-    res.json(rows);
+    const result = await db.query("SELECT * FROM announcements ORDER BY date DESC");
+    res.json(result.rows);
   } catch (err) {
-    console.error("DB error:", err);
-    res.status(500).json({ message: "Database error" });
+    console.error("Fetch announcements error:", err);
+    res.status(500).json({ message: "Failed to fetch announcements" });
   }
 });
 
-// === UPLOAD RESULTS ===
-app.post("/admin/upload-result", upload.single("resultFile"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-
-  const fileUrl = `/uploads/${req.file.filename}`;
+// === RESULTS ===
+// Upload new result (admin)
+app.post("/results", async (req, res) => {
   try {
-    await pool.query(
-      "INSERT INTO results (filename, file_path, uploaded_at) VALUES ($1, $2, NOW())",
-      [req.file.originalname, fileUrl]
+    const { matric, name, course, grade } = req.body;
+    await db.query(
+      "INSERT INTO results (matric, name, course, grade) VALUES ($1, $2, $3, $4)",
+      [matric, name, course, grade]
     );
-    res.json({ message: "✅ Result uploaded!", fileUrl });
+    res.json({ message: "Result uploaded successfully" });
   } catch (err) {
-    console.error("DB error:", err);
-    res.status(500).json({ message: "Database error" });
+    console.error("Result upload error:", err);
+    res.status(500).json({ message: "Failed to upload result" });
   }
 });
 
-app.get("/user/results", async (req, res) => {
+// Get results (public)
+app.get("/results", async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      "SELECT * FROM results ORDER BY uploaded_at DESC"
-    );
-    res.json(rows);
+    const result = await db.query("SELECT * FROM results ORDER BY id DESC");
+    res.json(result.rows);
   } catch (err) {
-    console.error("DB error:", err);
-    res.status(500).json({ message: "Database error" });
+    console.error("Fetch results error:", err);
+    res.status(500).json({ message: "Failed to fetch results" });
   }
 });
 
-// === Catch-all ===
-app.get("*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
-});
-
-// === Start server ===
+// === SERVER LISTEN ===
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server started on port ${PORT}`));
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
