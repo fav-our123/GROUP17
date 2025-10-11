@@ -6,14 +6,21 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import pkg from "pg";
+import bcrypt from "bcrypt"; // for secure passwords
 
 dotenv.config();
 const { Pool } = pkg;
 const app = express();
-app.use(express.json());
-app.use(cors({ origin: "*", credentials: true }));
 
-// --- Path setup ---
+app.use(express.json());
+app.use(
+  cors({
+    origin: ["https://group171.onrender.com", "*"],
+    credentials: true,
+  })
+);
+
+// === Path setup ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const frontendPath = path.join(__dirname, "../FRONTEND");
@@ -23,23 +30,47 @@ if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
 app.use(express.static(frontendPath));
 app.use("/uploads", express.static(uploadPath));
 
-// --- Database setup (Postgres) ---
+// === Database setup ===
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 });
 
-// --- Multer setup ---
+// === Multer setup ===
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadPath),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 const upload = multer({ storage });
 
-// --- Routes ---
+// === Test route ===
 app.get("/", (req, res) => res.send("✅ FUTO Dept Server Running!"));
 
-// Announcements
+// === ADMIN AUTHENTICATION ===
+// (You can later replace this with a proper "admins" table)
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@futo.edu.ng";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD_HASH || bcrypt.hashSync("admin123", 10); // default
+
+app.post("/admin/login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ message: "Email and password required" });
+
+  try {
+    const match =
+      email === ADMIN_EMAIL && (await bcrypt.compare(password, ADMIN_PASSWORD));
+
+    if (!match)
+      return res.status(401).json({ message: "Invalid credentials" });
+
+    res.json({ message: "✅ Login successful", email });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// === ANNOUNCEMENTS ===
 app.post("/admin/announcement", async (req, res) => {
   const { title, message } = req.body;
   if (!title || !message)
@@ -59,7 +90,9 @@ app.post("/admin/announcement", async (req, res) => {
 
 app.get("/user/announcements", async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM announcements ORDER BY id DESC");
+    const { rows } = await pool.query(
+      "SELECT * FROM announcements ORDER BY id DESC"
+    );
     res.json(rows);
   } catch (err) {
     console.error("DB error:", err);
@@ -67,7 +100,7 @@ app.get("/user/announcements", async (req, res) => {
   }
 });
 
-// Upload Result
+// === UPLOAD RESULTS ===
 app.post("/admin/upload-result", upload.single("resultFile"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -86,7 +119,9 @@ app.post("/admin/upload-result", upload.single("resultFile"), async (req, res) =
 
 app.get("/user/results", async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM results ORDER BY uploaded_at DESC");
+    const { rows } = await pool.query(
+      "SELECT * FROM results ORDER BY uploaded_at DESC"
+    );
     res.json(rows);
   } catch (err) {
     console.error("DB error:", err);
@@ -94,11 +129,11 @@ app.get("/user/results", async (req, res) => {
   }
 });
 
-// Catch-all
+// === Catch-all for frontend routing ===
 app.get("*", (req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-// Start server
+// === Start Server ===
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server started on port ${PORT}`));
