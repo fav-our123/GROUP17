@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+
+>>>>>>> cce15782868ab233eac9c9084a4358fd1c9d1f06
 services:
   - type: web
     name: GROUP17
@@ -6,6 +10,7 @@ services:
     buildCommand: "npm install"
     startCommand: "npm start"
     envVars:
+<<<<<<< HEAD
       - key: postgresql://csc_dept_user:cXR49dWsnFEzszsRaDOrthcVmNuLxKud@dpg-d3jr85ur433s739i5a2g-a.oregon-postgres.render.com/csc_dept
         fromDatabase:
           name: csc-dept
@@ -14,3 +19,7 @@ services:
 databases:
   - name: csc_dept
     plan: free
+=======
+      - key: DATABASE_URL
+        value: "postgresql://csc_dept_user:cXR49dWsnFEzszsRaDOrthcVmNuLxKud@dpg-d3jr85ur433s739i5a2g-a.oregon-postgres.render.com/csc_dept"
+>>>>>>> cce15782868ab233eac9c9084a4358fd1c9d1f06
