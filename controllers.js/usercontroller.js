@@ -1,31 +1,23 @@
-import db from "../db/connection.js";
+const db = require("../db");
 
-// Get all announcements for students
-export const getAnnouncements = (req, res) => {
-  const sql = "SELECT * FROM announcements ORDER BY created_at DESC";
-  db.query(sql, (err, result) => {
-    if (err) {
-      console.error("DB error in getAnnouncements:", err);
-      return res.status(500).json({ message: "Database error" });
-    }
-    if (result.length === 0) {
-      return res.json({ message: "No announcements yet", data: [] });
-    }
-    res.json(result);
-  });
+// Get all announcements
+exports.getAnnouncements = async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM announcements ORDER BY created_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching announcements:", err);
+    res.status(500).json({ message: "Server error while fetching announcements." });
+  }
 };
 
-// Get all results for students
-export const getResults = (req, res) => {
-  const sql = "SELECT * FROM results ORDER BY uploaded_at DESC";
-  db.query(sql, (err, result) => {
-    if (err) {
-      console.error("DB error in getResults:", err);
-      return res.status(500).json({ message: "Database error" });
-    }
-    if (result.length === 0) {
-      return res.json({ message: "No results yet", data: [] });
-    }
-    res.json(result);
-  });
+// Get all results
+exports.getResults = async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM results ORDER BY uploaded_at DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching results:", err);
+    res.status(500).json({ message: "Server error while fetching results." });
+  }
 };
