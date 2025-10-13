@@ -12,8 +12,8 @@ module.exports = function (req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = payload; // attach decoded token payload
+    const payload = jwt.verify(token, process.env.JWT_SECRET || "secretkey");
+    req.user = payload;
     next();
   } catch (err) {
     if (err.name === "TokenExpiredError") {

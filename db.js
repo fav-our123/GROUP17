@@ -1,13 +1,13 @@
-// db.js
 const { Pool } = require("pg");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
-// Create a PostgreSQL connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Render requires SSL
+  ssl: {
+    rejectUnauthorized: false // Required for Render's managed PostgreSQL
+  }
 });
 
 module.exports = pool;

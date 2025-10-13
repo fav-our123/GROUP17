@@ -1,54 +1,42 @@
-const express = require('express');
-const db = require('../db');
-const auth = require('../middleware/auth');
+import express from "express";
+import db from "../db.js";
+import auth from "../middleware/auth.js";
+
 const router = express.Router();
 
-/**
- * POST /api/announcements
- * Create a new announcement (Admin only)
- */
-router.post('/', auth, async (req, res) => {
+// --- Create Announcement (Admin only) ---
+router.post("/", auth, async (req, res) => {
   const { title, message } = req.body;
-
   if (!title?.trim() || !message?.trim()) {
-    return res.status(400).json({ message: 'Both title and message are required.' });
+    return res.status(400).json({ message: "Both title and message are required." });
   }
 
   try {
-    const [result] = await db.query(
-      'INSERT INTO announcements (title, message, created_at) VALUES (?, ?, NOW())',
+    const result = await db.query(
+      "INSERT INTO announcements (title, body, created_at) VALUES ($1, $2, NOW()) RETURNING *",
       [title.trim(), message.trim()]
     );
-
-    const [newAnnouncement] = await db.query(
-      'SELECT * FROM announcements WHERE id = ?',
-      [result.insertId]
-    );
-
     res.status(201).json({
-      message: '✅ Announcement posted successfully.',
-      data: newAnnouncement[0],
+      message: "✅ Announcement posted successfully.",
+      data: result.rows[0],
     });
   } catch (error) {
-    console.error('Error posting announcement:', error);
-    res.status(500).json({ message: 'Server error while posting announcement.' });
+    console.error("Error posting announcement:", error);
+    res.status(500).json({ message: "Server error while posting announcement." });
   }
 });
 
-/**
- * GET /api/announcements
- * Retrieve all announcements (Public route)
- */
-router.get('/', async (req, res) => {
+// --- Get All Announcements (Public) ---
+router.get("/", async (req, res) => {
   try {
-    const [rows] = await db.query(
-      'SELECT * FROM announcements ORDER BY created_at DESC'
+    const result = await db.query(
+      "SELECT * FROM announcements ORDER BY created_at DESC"
     );
-    res.status(200).json(rows);
+    res.status(200).json(result.rows);
   } catch (error) {
-    console.error('Error fetching announcements:', error);
-    res.status(500).json({ message: 'Server error while fetching announcements.' });
+    console.error("Error fetching announcements:", error);
+    res.status(500).json({ message: "Server error while fetching announcements." });
   }
 });
 
-module.exports = router;
+export default router;

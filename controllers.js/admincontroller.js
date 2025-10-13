@@ -1,6 +1,7 @@
 import db from "../db/connection.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import verifyToken from "../middleware/auth.js";
 
 // === Register new admin ===
 export const registerAdmin = async (req, res) => {
@@ -43,7 +44,6 @@ export const loginAdmin = (req, res) => {
     const valid = await bcrypt.compare(password, admin.password);
     if (!valid) return res.status(401).json({ message: "Invalid credentials" });
 
-    // Generate JWT
     const token = jwt.sign(
       { id: admin.id, username: admin.username },
       process.env.JWT_SECRET || "secretkey",
@@ -64,7 +64,7 @@ export const postAnnouncement = (req, res) => {
   if (!title || !message)
     return res.status(400).json({ message: "All fields required" });
 
-  const sql = "INSERT INTO announcements (title, message) VALUES (?, ?)";
+  const sql = "INSERT INTO announcements (title, message, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)";
   db.query(sql, [title, message], (err) => {
     if (err) {
       console.error("DB error in postAnnouncement:", err);
