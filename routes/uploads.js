@@ -33,7 +33,9 @@ const upload = multer({
 
 // --- Upload PDF (Admin only) ---
 router.post("/pdf", auth, upload.single("file"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: "No file uploaded" });
+  }
 
   const fileUrl = `/uploads/${req.file.filename}`;
 
@@ -42,10 +44,18 @@ router.post("/pdf", auth, upload.single("file"), async (req, res) => {
       "INSERT INTO results (filename, file_path, uploaded_at) VALUES ($1, $2, NOW())",
       [req.file.originalname, fileUrl]
     );
-    res.json({ message: "✅ File uploaded", filename: req.file.originalname, fileUrl });
+    res.json({
+      success: true,
+      message: "✅ File uploaded successfully",
+      file: {
+        originalName: req.file.originalname,
+        storedName: req.file.filename,
+        url: fileUrl
+      }
+    });
   } catch (err) {
     console.error("Error uploading file:", err);
-    res.status(500).json({ message: "Database error while saving file" });
+    res.status(500).json({ success: false, message: "Database error while saving file" });
   }
 });
 
@@ -53,10 +63,10 @@ router.post("/pdf", auth, upload.single("file"), async (req, res) => {
 router.get("/pdfs", async (req, res) => {
   try {
     const result = await db.query("SELECT * FROM results ORDER BY uploaded_at DESC");
-    res.json(result.rows);
+    res.json({ success: true, files: result.rows });
   } catch (err) {
     console.error("Error fetching PDFs:", err);
-    res.status(500).json({ message: "Database error while fetching results" });
+    res.status(500).json({ success: false, message: "Database error while fetching results" });
   }
 });
 

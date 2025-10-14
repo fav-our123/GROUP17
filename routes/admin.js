@@ -9,19 +9,19 @@ const router = express.Router();
 router.post("/register", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ message: "Username and password required" });
+    return res.status(400).json({ success: false, message: "Username and password required" });
   }
 
   try {
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, Number(process.env.SALT_ROUNDS) || 10);
     await db.query(
       "INSERT INTO admins (username, password, created_at) VALUES ($1, $2, NOW())",
       [username, hashed]
     );
-    res.json({ message: "✅ Admin registered successfully" });
+    res.json({ success: true, message: "✅ Admin registered successfully" });
   } catch (err) {
     console.error("Error registering admin:", err);
-    res.status(500).json({ message: "Database error" });
+    res.status(500).json({ success: false, message: "Database error" });
   }
 });
 
@@ -36,29 +36,31 @@ router.post("/login", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
-    const admin = result.rows[0];
-    const isMatch = await bcrypt.compare(password, admin.password);
+    const { id, password: hashedPassword } = result.rows[0];
+    const isMatch = await bcrypt.compare(password, hashedPassword);
+
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
     const token = jwt.sign(
-      { id: admin.id, username: admin.username },
-      process.env.JWT_SECRET || "mysecretkey",
+      { id, username },
+      process.env.JWT_SECRET, // no fallback in production
       { expiresIn: "1h" }
     );
 
     res.json({
+      success: true,
       message: "✅ Login successful",
       token,
-      user: { id: admin.id, username: admin.username }
+      user: { id, username }
     });
   } catch (err) {
     console.error("Error logging in admin:", err);
-    res.status(500).json({ message: "Database error" });
+    res.status(500).json({ success: false, message: "Database error" });
   }
 });
 

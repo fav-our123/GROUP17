@@ -1,9 +1,8 @@
-const jwt = require("jsonwebtoken");
-require("dotenv").config();
+import jwt from "jsonwebtoken";
 
-module.exports = function (req, res, next) {
+export default function auth(req, res, next) {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.startsWith("Bearer ")
+  const token = authHeader?.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
     : authHeader;
 
@@ -12,7 +11,7 @@ module.exports = function (req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "secretkey");
+    const payload = jwt.verify(token, process.env.JWT_SECRET || "mysecretkey");
     req.user = payload;
     next();
   } catch (err) {
@@ -21,4 +20,4 @@ module.exports = function (req, res, next) {
     }
     return res.status(401).json({ message: "Invalid token" });
   }
-};
+}

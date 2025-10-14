@@ -1,13 +1,18 @@
-const { Pool } = require("pg");
-const dotenv = require("dotenv");
+// db.js
+import pkg from "pg";
+import dotenv from "dotenv";
 
 dotenv.config();
 
+const { Pool } = pkg;
+
 const pool = new Pool({
-  connectionString: process.env.postgresql,//csc_dept_user:cXR49dWsnFEzszsRaDOrthcVmNuLxKud@dpg-d3jr85ur433s739i5a2g-a.oregon-postgres.render.com/csc_dept;
+  connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Required for Render's managed PostgreSQL
-  }
+    rejectUnauthorized: false, // required for Render/Postgres
+  },
 });
 
-module.exports = pool;
+export default {
+  query: (text, params) => pool.query(text, params),
+};

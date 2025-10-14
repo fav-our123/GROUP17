@@ -1,6 +1,7 @@
+// middleware/auth.js
 import jwt from "jsonwebtoken";
 
-export default function (req, res, next) {
+export default function auth(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader?.startsWith("Bearer ")
     ? authHeader.split(" ")[1]
