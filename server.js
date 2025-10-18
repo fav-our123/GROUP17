@@ -11,7 +11,15 @@ dotenv.config();
 const app = express();
 
 // === Middleware ===
-app.use(cors());
+// Allow requests from your frontend (group171.onrender.com)
+app.use(
+  cors({
+    origin: "https://group171.onrender.com", // your frontend URL
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads"))); // Serve uploaded PDFs
 
@@ -21,10 +29,10 @@ app.get("/", (req, res) => {
 });
 
 // === Mount Routes ===
-app.use("/admin", adminRoutes);                  // /admin/login, /admin/register
-app.use("/api/announcements", announcementRoutes); // /api/announcements (GET, POST)
-app.use("/api/results", resultRoutes);             // /api/results/pdf, /api/results/pdfs
-app.use("/user", userRoutes);                      // /user/announcements, /user/results
+app.use("/admin", adminRoutes);                     // /admin/login, /admin/register
+app.use("/api/announcements", announcementRoutes);  // /api/announcements (GET, POST)
+app.use("/api/results", resultRoutes);              // /api/results/pdf, /api/results/pdfs
+app.use("/user", userRoutes);                       // /user/announcements, /user/results
 
 // === Start Server ===
 const PORT = process.env.PORT || 5000;
