@@ -2,7 +2,6 @@ import express from "express";
 import db from "../db.js";
 import auth from "../middleware/auth.js";
 
-
 const router = express.Router();
 
 // --- Create Announcement (Admin only) ---
@@ -14,7 +13,7 @@ router.post("/", auth, async (req, res) => {
 
   try {
     const result = await db.query(
-      "INSERT INTO announcements (title, body, created_at) VALUES ($1, $2, NOW()) RETURNING *",
+      "INSERT INTO announcements (title, body, posted_at) VALUES ($1, $2, NOW()) RETURNING *",
       [title.trim(), message.trim()]
     );
     res.status(201).json({
@@ -31,7 +30,7 @@ router.post("/", auth, async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const result = await db.query(
-      "SELECT * FROM announcements ORDER BY created_at DESC"
+      "SELECT * FROM announcements ORDER BY posted_at DESC"
     );
     res.status(200).json(result.rows);
   } catch (error) {
